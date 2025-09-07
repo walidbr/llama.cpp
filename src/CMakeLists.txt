@@ -58,7 +58,7 @@ endif()
 # Build it into a static lib and link it so tracepoints are available across platforms
 # (macOS, Linux, Android; incl. Vulkan/Mali).
 add_library(perfetto_sdk STATIC profiler/perfetto.cc)
-
+set_target_properties(perfetto_sdk PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_include_directories(perfetto_sdk PUBLIC ${CMAKE_SOURCE_DIR}/src/profiler)
 target_compile_features(perfetto_sdk PRIVATE cxx_std_17)
 
