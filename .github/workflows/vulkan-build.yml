@@ -1,0 +1,71 @@
+name: Vulkan Build (No Run)
+
+on:
+  pull_request:
+
+jobs:
+  build-vulkan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            gcc-aarch64-linux-gnu \
+            g++-aarch64-linux-gnu \
+            cmake \
+            make \
+            wget \
+            tar \
+            unzip \
+            curl \
+            libcurl4-openssl-dev \
+            libvulkan-dev  \
+            vulkan-tools \
+            build-essential
+
+      - name: Install Vulkan SDK
+        run: |
+          wget https://sdk.lunarg.com/sdk/download/1.4.321.1/linux/vulkansdk-linux-x86_64-1.4.321.1.tar.xz -O vulkansdk.tar.xz \
+            && tar -xf vulkansdk.tar.xz -C ./ \
+            && rm vulkansdk.tar.xz
+      - name: Install Android NDK
+        run: |
+          wget https://dl.google.com/android/repository/android-ndk-r27d-linux.zip -O android-ndk.zip \
+            && unzip android-ndk.zip -d ./ \
+            && rm android-ndk.zip
+      - name: Set environment variables
+        run: |
+          echo "VULKAN_SDK=$(pwd)/1.4.321.1/x86_64" >> $GITHUB_ENV
+          echo "PATH=$(pwd)/1.4.321.1/x86_64/bin:$PATH:$(pwd)/android-ndk-r27d/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_ENV
+          echo "VK_LAYER_PATH=$(pwd)/1.4.321.1/x86_64/etc/vulkan/explicit_layer.d" >> $GITHUB_ENV
+          echo "Vulkan_INCLUDE_DIR=$(pwd)/1.4.321.1/x86_64/include" >> $GITHUB_ENV
+          echo "Vulkan_LIBRARY=$(pwd)/1.4.321.1/x86_64/lib/libvulkan.so" >> $GITHUB_ENV
+          echo "GLSLC=$(pwd)/1.4.321.1/x86_64/bin/glslc" >> $GITHUB_ENV
+      - name: Configure (CMake, Vulkan enabled)
+        env:
+          VULKAN_SDK: ${{ env.VULKAN_SDK }}
+          PATH: ${{ env.PATH }}
+        run: |
+          cmake -S . -B build-vk -DCMAKE_BUILD_TYPE=RelWithDebInfo -DGGML_VULKAN=ON
+      - name: Build
+        run: |
+          cmake --build build-vk -j8
+      - name: Verify build outputs
+        run: |
+          ls -la build-vk/bin || true
+          test -e build-vk/bin/llama-cli
+      - name: Show test command (not executed)
+        run: |
+          echo "To run (requires Vulkan-capable GPU):"
+          echo "GGML_VK_PERF_SILENT=1 GGML_VK_PERF_LOGGER=1 LLAMA_PERFETTO_TRACE=./<out>.pftrace build-vk/bin/llama-cli -m <model>.gguf"
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-vk-bin
+          path: build-vk/bin/

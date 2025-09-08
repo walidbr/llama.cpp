@@ -4460,8 +4460,6 @@ static void ggml_vk_instance_init() {
 
     std::vector<vk::PhysicalDevice> devices = vk_instance.instance.enumeratePhysicalDevices();
 
-    std::vector<vk::PhysicalDevice> devices = vk_instance.instance.enumeratePhysicalDevices();
-
     // Emulate behavior of CUDA_VISIBLE_DEVICES for Vulkan
     char * devices_env = getenv("GGML_VK_VISIBLE_DEVICES");
     if (devices_env != nullptr) {
